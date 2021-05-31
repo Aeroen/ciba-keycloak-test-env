@@ -15,9 +15,6 @@ if [ ! -x "$(command -v xdg-open)" ]; then
     exit 1
 fi
 
-# Launch GUI apps from WSL
-export DISPLAY="$(sed -n 's/nameserver //p' /etc/resolv.conf):0"
-
 session='CIBA'
 session_exists=$(tmux list-sessions 2>/dev/null | grep "${session}")
 
@@ -49,7 +46,6 @@ if [ -z "${TMUX}" ]; then
         # Lauching the client script before both servers are up wouldn't be bright. How about some Tmux help in the meantime?
         tmux send-keys -t 'Keycloak.2' 'C-l' # Clear the "echo" commands, not their outputs
         tmux send-keys -t 'Keycloak.2' 'echo "Not used to Tmux? This may help: https://tmuxcheatsheet.com"' 'C-m'
-        tmux send-keys -t 'Keycloak.2' 'echo "GUI client not opening? You need to start VcXsrv: https://sourceforge.net/projects/vcxsrv/"' 'C-m'
         tmux send-keys -t 'Keycloak.2' 'echo "Your web browser is going to open. Don'"'"'t worry! It is used to choose the response you want the authentication server to send."' 'C-m'
         tmux send-keys -t 'Keycloak.2' 'echo -e "<- Once the wall of text stops rolling over there...\n"' 'C-m'
         tmux send-keys -t 'Keycloak.2' './client.sh # ... you should be able to press "Enter"!'
