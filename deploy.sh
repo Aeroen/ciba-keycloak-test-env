@@ -2,10 +2,10 @@
 
 
 # Keycloak CIBA "one click" deployer
-# Current status: Working as expected... on my machine
+# Current status: Working as expected... on my machines
 
 
-# Enable additional checks regarding proxies and stuff
+# Enable proxy if necessary
 USE_PROXY=false
 PROXY_IP=''
 PROXY_PORT=''
@@ -26,9 +26,12 @@ if [ ! -x "$(command -v git)" ]; then
 fi
 
 if [ -x "$(command -v java)" ]; then
-    # Not sure if it works with Oracle's JDK but who uses that anyway?
-    update-alternatives --list java | grep 'java-8' >/dev/null
-    [ $? -ne 0 ] && echo 'Error: JDK 1.8 is required' >&2 && exit 1
+    # Won't work with Oracle's JDK but who uses that anyway?
+    version=$(java -version 2>&1 | sed -n 's/^openjdk version "\(1[0-9]*\.[0-9]*\).*$/\1/p')
+    if [ ! $(echo "${version} >= 1.8" | bc -l) ]; then
+        echo 'Error: OpenJDK >= 8 is required' >&2
+        exit 1
+    fi
 else
     echo 'Error: Java either not installed or not in PATH' >&2
     exit 1
@@ -60,7 +63,7 @@ EoF
 fi
 
 
-### First step: download or extract
+### First step: download
 
 keycloak_repo_url='https://github.com/keycloak/keycloak'
 keycloak_dir='./keycloak/'
@@ -141,7 +144,7 @@ if [ $? -eq 0 ]; then
     echo 'WildFly user "Admin" added - password is "test123!"'
     echo 'URL: http://localhost:9990'
 else
-    echo 'Error: unable to add an user in WildFly'
+    echo 'Error: unable to add an user in WildFly' >&2
     exit 9
 fi
 
@@ -152,7 +155,7 @@ if [ $? -eq 0 ]; then
     echo 'Keycloak user "Admin" added - password is "test123!"'
     echo 'URL: http://localhost:8080/auth'
 else
-    echo 'Error: unable to add an user in Keycloak'
+    echo 'Error: unable to add an user in Keycloak' >&2
     exit 10
 fi
 
@@ -227,4 +230,5 @@ cd -
 
 
 ### Fourth step: launch
+
 ./launch.sh # Hopefully...
