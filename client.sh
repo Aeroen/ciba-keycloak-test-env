@@ -3,39 +3,68 @@
 
 # CIBA client script
 # Compatible with bash only due to its 'read' command specificities
-# Todo:
-#   - Add a request to the "userinfo" endpoint
-#   - Use Authorization (Basic) header instead of POST parameters
 
 
 declare -A params_hmap # cURL parameters as an associative array
+
 
 _hmap_parse () {
     local params=""
     for key in ${!params_hmap[@]}; do
         [ -z "${params}" ] || params="${params}&"
-        params="${params}$key=${params_hmap[$key]}"
+        params="${params}$key=${params_hmap[${key}]}"
     done
     echo "${params}"
 }
 
+_print_req_info () {
+    echo "----- $1 -----"
+    echo "URL: $2"
+
+    if [ ! -z "${authz_header}" ]; then
+        echo 'Headers:'
+        echo -e "\tAuthorization: ${authz_header}"
+    fi
+
+    if [ ! -z "${params}" ]; then
+        echo "Form data:"
+        for key in ${!params_hmap[@]}; do
+            echo -e "\t${key} -> ${params_hmap[${key}]}"
+        done
+    fi
+
+    echo "------------------------------"
+}
+
 _do_curl_req () {
-    local res=$(curl -ss -d "${params}" "$1")
+    if [ ! -z "${params}" ]; then
+        local res=$(curl -ss -H "Authorization: $2" -d "${params}" "$1")
+    else
+        local res=$(curl -ss -H "Authorization: $2" "$1")
+    fi
     local ret_code=$?
 
     if [ ${ret_code} -ne 0 ]; then
         echo "Got return code ${ret_code}: something went wrong" >&2
         exit 1
     else
-        echo "$2" >/dev/tty # That was pretty annoying to find out 
+        echo "$3" >/dev/tty # That was pretty annoying to find out 
     fi
-    
+
     echo "${res}"
 }
 
-_json_parse () {
-    [ -z "$1" ] || echo "$1" | python -c 'import sys,json;print(json.load(sys.stdin).get("'$2'", ""))'
+_print_json_resp () {
+    read -rn 1 -p 'Display Json results? [y/N] '
+    echo # Newline after input
+    [[ "${REPLY}" == [yY] ]] && echo "$1" | python -m json.tool
 }
+
+_json_parse () {
+    [ -z "$1" ] ||
+    echo "$1" | python -c 'import sys,json;print(json.load(sys.stdin).get("'$2'", ""))'
+}
+
 
 base_url='http://localhost:8080/auth/realms/CIBA/protocol/openid-connect/'
 # Endpoint in outdated version: /backchannelAuthn
@@ -44,16 +73,22 @@ authn_endpoint="${base_url}ext/ciba/auth"
 client_id='client' # Keycloak -> Clients (must be set to "confidential")
 client_secret='932cf37e-2dcd-43e5-a990-1dc7a5c1575a'
 login_hint='user001' # Keycloak -> Users (can use either username or email)
-scope='profile email' # Can be set to anything at the moment
+scope='openid profile email' # Can be set to anything at the moment
 binding_message='hello' # Should be shown on both authentication and consumption devices
 
-# 1. Backchannel authentication request
-params_hmap=(["client_id"]="${client_id}" ["client_secret"]="${client_secret}"
-             ["login_hint"]="${login_hint}" ["scope"]="${scope}"
-             ["binding_message"]="${binding_message}") 
-params=$(_hmap_parse)
+# Authorization header
+authz_header='Basic '$(echo -n "${client_id}:${client_secret}" | base64 -w 0)
 
-authn_res=$(_do_curl_req "${authn_endpoint}" 'Authentication request sent')
+
+# 1. Backchannel authentication request
+params_hmap=(["login_hint"]="${login_hint}" ["scope"]="${scope}"
+             ["binding_message"]="${binding_message}")
+params=$(_hmap_parse)
+_print_req_info 'Authentication request' "${authn_endpoint}"
+
+authn_res=$(_do_curl_req "${authn_endpoint}" "${authz_header}" \
+                         'Authentication request sent')
+_print_json_resp "${authn_res}"
 
 auth_req_id=$(_json_parse "${authn_res}" 'auth_req_id')
 auth_limit=$(($(date +'%s') + $(_json_parse "${authn_res}" 'expires_in')))
@@ -64,13 +99,15 @@ if [ -z "${auth_req_id}" ]; then
     exit 2
 fi
 
+
 token_endpoint="${base_url}token"
 grant_type='urn:openid:params:grant-type:ciba' # Constant 
 
+
 # 2. Token request (polling)
-params_hmap=(["client_id"]="${client_id}" ["client_secret"]="${client_secret}"
-             ["grant_type"]="${grant_type}" ["auth_req_id"]="${auth_req_id}")
+params_hmap=(["grant_type"]="${grant_type}" ["auth_req_id"]="${auth_req_id}")
 params=$(_hmap_parse)
+_print_req_info 'Token request (polling)' "${token_endpoint}"
 
 if [ ! -z "${interval}" ]; then
     sleep_time=$((interval + 5))
@@ -81,7 +118,9 @@ else
 fi
 
 while [ $(date +'%s') -lt ${auth_limit} ]; do
-    token_res=$(_do_curl_req "${token_endpoint}" 'Token request sent')
+    token_res=$(_do_curl_req "${token_endpoint}" "${authz_header}" 'Token request sent')
+    _print_json_resp "${token_res}"
+
     error=$(_json_parse "${token_res}" 'error')
     if [ ! -z "${error}" ]; then
         error_desc=$(_json_parse "${token_res}" 'error_description')
@@ -107,7 +146,7 @@ while [ $(date +'%s') -lt ${auth_limit} ]; do
                 exit 5
                 ;;
             'invalid_request')
-                echo "Invalid request : ${error_desc}" >&2
+                echo "Invalid request: ${error_desc}" >&2
                 exit 6
                 ;;
             *)
@@ -118,11 +157,8 @@ while [ $(date +'%s') -lt ${auth_limit} ]; do
     else
         token=$(_json_parse "${token_res}" 'access_token')
         if [ ! -z "${token}" ]; then
-            echo 'Token acquired: authentication was successful!' 
-            read -rn 1 -p 'Display Json results? [y/N] '
-            echo # Newline after input
-            [[ "${REPLY}" == [yY] ]] && echo "${token_res}" | python -m json.tool
-            exit 0
+            echo 'Token acquired: authentication was successful!'
+            break
         else
             echo 'No error, yet no token either... this should NOT happen' >&2
             exit 8
@@ -130,5 +166,27 @@ while [ $(date +'%s') -lt ${auth_limit} ]; do
     fi
 done
 
-echo 'Time limit exceeded: authentication request has expired' >&2
-exit 9
+if [ -z "${token}" ]; then
+    echo 'Time limit exceeded: authentication request has expired' >&2 &&
+    exit 9
+fi
+
+
+info_endpoint="${base_url}userinfo"
+authz_header="Bearer ${token}"
+unset params
+_print_req_info 'UserInfo request' "${info_endpoint}"
+
+
+# 3. UserInfo retrieval
+info_res=$(_do_curl_req "${info_endpoint}" "${authz_header}" 'UserInfo request sent')
+_print_json_resp "${info_res}"
+
+error=$(_json_parse "${info_res}" 'error')
+if [ ! -z "${error}" ]; then
+    error_desc=$(_json_parse "${info_res}" 'error_description')
+    echo "An error occurred: ${error_desc}" >&2
+    exit 10
+fi     
+
+echo 'Successfully retrieved user informations!'
