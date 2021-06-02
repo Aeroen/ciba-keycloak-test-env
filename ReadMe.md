@@ -15,15 +15,15 @@ While everything should theoretically both deploy and run correctly on any Linux
 - Curl  
 - Git  
 - Maven  
-- OpenJDK 8  
+- OpenJDK 8 or later  
 - Tmux  
 - XDG-Utils  
   
 Debian-based distros:  
-`sudo apt install curl git maven openjdk-8-jdk tmux xdg-utils`  
+`# apt install curl git maven openjdk-8-jdk tmux xdg-utils`  
   
 Arch-based distros:  
-`sudo pacman -S curl git jdk8-openjdk maven tmux xdg-utils`  
+`# pacman -S curl git jdk8-openjdk maven tmux xdg-utils`  
 
   
 ### Use  
@@ -40,7 +40,7 @@ More information can be found within the file itself.
   
 launch.sh will be executed at the end of deploy.sh and can be manually used thereafter. In accordance to its name, this script launches what has been built through a terminal multiplexer (namely Tmux).  
   
-client.sh is a simplistic script meant to emulate an application that has to authenticate using CIBA. The previously used script will prompt you to execute it once ready.  
+client.sh is a simple script meant to emulate an application that has to authenticate using CIBA. The previously used script will prompt you to execute it once ready.  
 
 
 ### Credentials
