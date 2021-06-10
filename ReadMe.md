@@ -30,7 +30,7 @@ Arch-based distros:
   
 deploy.sh is the main script, which works as follow:  
 - Clone Keycloak from its main repository (keycloak/Keycloak)  
-- Clone the authentication server (Aeroen/ciba-decoupled-authn-server)  
+- Clone the authentication server (tnorimat/ciba-authn-entity)  
 - Build both of these  
 - Do some configuration in order to enable CIBA  
 - Launch Keycloak in order to do some more configuration  
@@ -47,4 +47,4 @@ client.sh is a simple script meant to emulate an application that has to authent
 
 WildFly (localhost:9990): `Admin:test123!`  
 Keycloak (localhost:8080): `Admin:test123!`  
-Client (on realm CIBA): `client:932cf37e-2dcd-43e5-a990-1dc7a5c1575a`  
+Client (on realm "ciba"): `client:932cf37e-2dcd-43e5-a990-1dc7a5c1575a`  

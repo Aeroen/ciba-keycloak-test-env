@@ -13,6 +13,9 @@ PROXY_PORT=''
 # Target release version
 KEYCLOAK_TAG='13.0.1'
 
+# Target commit
+AUTHN_SERVER_COMMIT='74b516d'
+
 
 # Preparations
 if [ ! -x "$(command -v mvn)" ]; then
@@ -67,7 +70,7 @@ fi
 
 keycloak_repo_url='https://github.com/keycloak/keycloak'
 keycloak_dir='./keycloak/'
-authn_server_repo_url='https://github.com/Aeroen/ciba-decoupled-authn-server'
+authn_server_repo_url='https://github.com/tnorimat/ciba-authn-entity'
 authn_server_dir='./authn-server/'
 
 git clone -q "${keycloak_repo_url}"
@@ -75,15 +78,16 @@ git clone -q "${keycloak_repo_url}"
 git -C "${keycloak_dir}" checkout -q "${KEYCLOAK_TAG}"
 [ $? -ne 0 ] && echo 'Error: tag '"'${KEYCLOAK_TAG}'"' not found' >&2 && exit 4
 
-git clone -q "${authn_server_repo_url}" && mv './ciba-decoupled-authn-server/' "${authn_server_dir}"
+git clone -q "${authn_server_repo_url}" && mv './ciba-authn-entity/' "${authn_server_dir}"
 [ $? -ne 0 ] && echo 'Error: unable to clone the authn server from repository' >&2 && exit 3
+git -C "${authn_server_dir}" checkout -q "${AUTHN_SERVER_COMMIT}"
+[ $? -ne 0 ] && echo 'Error: commit '"'${AUTHN_SERVER_COMMIT}'"' not found' >&2 && exit 4
 
 
 ### Second step: build
 
 if [ -d "${keycloak_dir}" ]; then
     cd "${keycloak_dir}"
-    git reset -q --hard
     mvn -q -Pdistribution -pl 'distribution/server-dist' \
         -am -Dmaven.test.skip clean install
     if [ $? -ne 0 ]; then
@@ -99,8 +103,10 @@ cd -
 
 if [ -d "${authn_server_dir}" ]; then
     cd "${authn_server_dir}"
-    git reset -q --hard
-    ./mvnw -q clean install -DskipTests
+    # Systematic 404 without WAR packaging in my environment
+    target=$(($(grep -n '</description>' './pom.xml' | cut -d ':' -f 1) + 1))
+    sed -i "${target} i \ \ \ \ <packaging>war</packaging>" './pom.xml'
+    sh mvnw -q clean install -DskipTests
     if [ $? -ne 0 ]; then
         echo 'Error: unable to build in '"'${authn_server_dir}'"'' >&2
         exit 7
@@ -195,11 +201,11 @@ done
                                     --user 'Admin' \
                                     --password 'test123!'
 
-# Add a new realm named "CIBA"
-'./bin/kcadm.sh' create realms -s 'realm=CIBA' -s 'enabled=true'
+# Add a new realm named "ciba"
+'./bin/kcadm.sh' create realms -s 'realm=ciba' -s 'enabled=true'
 
 # Create an user on said realm
-'./bin/kcadm.sh' create users -r 'CIBA' -s 'username=user001' \
+'./bin/kcadm.sh' create users -r 'ciba' -s 'username=user001' \
                                         -s 'email=user001@localhost' \
                                         -s 'firstName=User' \
                                         -s 'lastName=Name' \
@@ -207,7 +213,7 @@ done
                                         -s 'emailVerified=true'
 
 # Create a new client (for the application, in our case client.sh)
-'./bin/kcadm.sh' create clients -r 'CIBA' -i -f - << EoF
+'./bin/kcadm.sh' create clients -r 'ciba' -i -f - << EoF
 {
     "clientId": "client",
     "secret": "932cf37e-2dcd-43e5-a990-1dc7a5c1575a",

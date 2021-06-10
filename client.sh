@@ -66,7 +66,7 @@ _json_parse () {
 }
 
 
-base_url='http://localhost:8080/auth/realms/CIBA/protocol/openid-connect/'
+base_url='http://localhost:8080/auth/realms/ciba/protocol/openid-connect/'
 # Endpoint in outdated version: /backchannelAuthn
 authn_endpoint="${base_url}ext/ciba/auth"
 
