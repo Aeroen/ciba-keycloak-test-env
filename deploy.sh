@@ -11,7 +11,7 @@ PROXY_IP=''
 PROXY_PORT=''
 
 # Target release version
-KEYCLOAK_TAG='13.0.1'
+KEYCLOAK_TAG='14.0.0'
 
 # Target commit
 AUTHN_SERVER_COMMIT='74b516d'
