@@ -15,19 +15,20 @@ if [ ! -x "$(command -v xdg-open)" ]; then
     exit 1
 fi
 
-session='CIBA'
-session_exists=$(tmux list-sessions 2>/dev/null | grep "${session}")
+SESSION='CIBA'
+SESSION_EXISTS=$(tmux list-sessions 2>/dev/null | grep "${SESSION}")
+KEYCLOAK_VER='14.0.0'
 
 # If this variable is set, we're already using Tmux
 if [ -z "${TMUX}" ]; then
     # Only create session if it doesn't already exist
-    if [ -z "${session_exists}" ]; then
+    if [ -z "${SESSION_EXISTS}" ]; then
     
         # Start new session with our name
-        tmux new-session -d -s "${session}" 
+        tmux new-session -d -s "${SESSION}" 
     
         # Rename first (and only, at the moment) window
-        tmux rename-window -t "${session}:0" 'Keycloak'
+        tmux rename-window -t "${SESSION}:0" 'Keycloak'
     
         # Split the window into three panes
         tmux split-window -t 'Keycloak.0' -h 
@@ -36,7 +37,7 @@ if [ -z "${TMUX}" ]; then
         #tmux split-window -t 'Keycloak.2' -v
     
         # Launch keycloak server in first pane...
-        tmux send-keys -t 'Keycloak.0' 'cd ./keycloak/keycloak-13.0.1/' 'C-m'
+        tmux send-keys -t 'Keycloak.0' "cd ./keycloak/keycloak-${KEYCLOAK_VER}/" 'C-m'
         tmux send-keys -t 'Keycloak.0' './bin/standalone.sh -Dkeycloak.profile.feature.ciba=enabled --server-config standalone.xml' 'C-m'
     
         # Launch decoupled authentication server in second pane...
@@ -58,6 +59,6 @@ else
     exit 2
 fi
 
-# Finally, attach the session
+# Finally, attach the session 
 sleep 15 && xdg-open 'http://localhost:8888/params/' &!
-tmux attach-session -t "${session}"
+tmux attach-session -t "${SESSION}"
