@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 
 # Keycloak CIBA "one click" deployer
@@ -11,7 +11,7 @@ PROXY_IP=''
 PROXY_PORT=''
 
 # Target release version
-KEYCLOAK_TAG='14.0.0'
+KEYCLOAK_TAG='15.0.0'
 
 # Target commit
 AUTHN_SERVER_COMMIT='74b516d'
@@ -129,7 +129,7 @@ cd - && cd "${keycloak_dir}/keycloak-${KEYCLOAK_TAG}/"
 # The authn server should be added as an SPI in Keycloak's configuration file
 spi=('            <spi name="ciba-auth-channel">
                   <default-provider>ciba-http-auth-channel</default-provider>
-                  <provider name="ciba-http-auth-channel" enabled="true">                
+                  <provider name="ciba-http-auth-channel" enabled="true">
                       <properties>
                           <property name="httpAuthenticationChannelUri"
                                     value="http://localhost:8888/request-authentication-channel"/>
@@ -166,8 +166,7 @@ else
 fi
 
 # Launch WildFly/Keycloak in the background
-nohup sh -c './bin/standalone.sh -Dkeycloak.profile.feature.ciba=enabled ' \
-            '--server-config standalone.xml' >/dev/null 2>&1 &
+nohup sh -c './bin/standalone.sh --server-config standalone.xml' >/dev/null 2>&1 &
 
 # Used later on in order to shut Keycloak down
 # Taken from https://unix.stackexchange.com/a/124148
@@ -185,11 +184,11 @@ list_descendants () {
 for i in $(seq 1 30); do
     curl -ss 'http://localhost:8080/auth' >/dev/null
     [ $? -eq 0 ] && break
-    
+
     if [ ${i} -eq 30 ]; then
         echo "Error: Keycloak won't start (or is too slow)" >&2
         exit 11
-    fi 
+    fi
 
     echo 'Keycloak not up yet... sleeping for 5s'
     sleep 5
@@ -212,19 +211,40 @@ done
                                         -s 'enabled=true' \
                                         -s 'emailVerified=true'
 
-# Create a new client (for the application, in our case client.sh)
+# Create a client for the application, in our case client.sh
+# This one is for CIBA Token Delivery in poll mode (which is the default)
 './bin/kcadm.sh' create clients -r 'ciba' -i -f - << EoF
 {
-    "clientId": "client",
+    "clientId": "client-poll",
     "secret": "932cf37e-2dcd-43e5-a990-1dc7a5c1575a",
     "enabled": true,
     "publicClient": false,
     "bearerOnly": false,
     "directAccessGrantsEnabled": true,
     "clientAuthenticatorType": "client-secret",
-    "redirectUris": ["*"],
     "attributes": {
-        "oidc.ciba.grant.enabled": true
+        "oidc.ciba.grant.enabled": true,
+        "ciba.backchannel.token.delivery.mode": "poll"
+    }
+}
+EoF
+
+# Create another client
+# This one is for CIBA Token Delivery in ping mode
+'./bin/kcadm.sh' create clients -r 'ciba' -i -f - << EoF
+{
+    "clientId": "client-ping",
+    "secret": "eda67416-42e3-44b7-898c-9ebf7d24cb7f",
+    "enabled": true,
+    "publicClient": false,
+    "bearerOnly": false,
+    "directAccessGrantsEnabled": true,
+    "clientAuthenticatorType": "client-secret",
+    "attributes": {
+        "oidc.ciba.grant.enabled": true,
+        "ciba.backchannel.token.delivery.mode": "ping",
+        "ciba.backchannel.client.notification.endpoint":
+            "http://localhost:8081/token-notification"
     }
 }
 EoF
@@ -237,4 +257,4 @@ cd -
 
 ### Fourth step: launch
 
-./launch.sh # Hopefully...
+./launch.sh "${KEYCLOAK_TAG}"

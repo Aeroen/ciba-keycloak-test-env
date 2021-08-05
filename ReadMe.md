@@ -15,7 +15,8 @@ While everything should theoretically both deploy and run correctly on any Linux
 - Curl  
 - Git  
 - Maven  
-- OpenJDK 8 or later  
+- OpenBSD Netcat (only required for "ping" mode)  
+- OpenJDK 8  
 - Tmux  
 - XDG-Utils  
   
@@ -24,6 +25,8 @@ Debian-based distros:
   
 Arch-based distros:  
 `# pacman -S curl git jdk8-openjdk maven tmux xdg-utils`  
+  
+Using a JDK whose version is greater than 8 should be fine more often than not, however this is the one Keycloak is intended to be built with.  
 
   
 ### Use  
@@ -41,10 +44,12 @@ More information can be found within the file itself.
 launch.sh will be executed at the end of deploy.sh and can be manually used thereafter. In accordance to its name, this script launches what has been built through a terminal multiplexer (namely Tmux).  
   
 client.sh is a simple script meant to emulate an application that has to authenticate using CIBA. The previously used script will prompt you to execute it once ready.  
+Either "poll" (default) or "ping" can be selected as a token delivery mode by passing your choice as an argument, e.g. `$ ./client.sh ping`.  
 
 
 ### Credentials
 
 WildFly (localhost:9990): `Admin:test123!`  
 Keycloak (localhost:8080): `Admin:test123!`  
-Client (on realm "ciba"): `client:932cf37e-2dcd-43e5-a990-1dc7a5c1575a`  
+Client #1 ("poll" mode, on realm "ciba"): `client-poll:932cf37e-2dcd-43e5-a990-1dc7a5c1575a`  
+Client #2 ("ping" mode, on realm" ciba"): `client-ping:eda67416-42e3-44b7-898c-9ebf7d24cb7f`  
