@@ -75,12 +75,12 @@ _do_curl_req () {
 _print_json_resp () {
     read -rn 1 -p 'Display Json results? [y/N] '
     echo # Newline after input
-    [[ "${REPLY}" == [yY] ]] && echo "$1" | python -m json.tool
+    [[ "${REPLY}" == [yY] ]] && echo "$1" | python3 -m json.tool
 }
 
 _json_parse () {
     [ -z "$1" ] ||
-    echo "$1" | python -c 'import sys,json;print(json.load(sys.stdin).get("'$2'", ""))'
+    echo "$1" | python3 -c 'import sys,json;print(json.load(sys.stdin).get("'$2'", ""))'
 }
 
 
