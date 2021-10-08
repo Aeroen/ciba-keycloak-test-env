@@ -15,8 +15,8 @@ if [ ! -x "$(command -v xdg-open)" ]; then
     exit 1
 fi
 
-# Keycloak release tag - default is 15.0.0 (currently the latest)
-KEYCLOAK_TAG="${1:-15.0.0}"
+# Keycloak release tag - default is 15.0.2 (currently the latest)
+KEYCLOAK_TAG="${1:-15.0.2}"
 
 SESSION='CIBA'
 SESSION_EXISTS=$(tmux list-sessions 2>/dev/null | grep "${SESSION}")

@@ -11,7 +11,7 @@ PROXY_IP=''
 PROXY_PORT=''
 
 # Target release version
-KEYCLOAK_TAG='15.0.0'
+KEYCLOAK_TAG='15.0.2'
 
 # Target commit
 AUTHN_SERVER_COMMIT='74b516d'
@@ -70,7 +70,7 @@ fi
 
 keycloak_repo_url='https://github.com/keycloak/keycloak'
 keycloak_dir='./keycloak/'
-authn_server_repo_url='https://github.com/tnorimat/ciba-authn-entity'
+authn_server_repo_url='https://github.com/Aeroen/ciba-authn-entity'
 authn_server_dir='./authn-server/'
 
 git clone -q "${keycloak_repo_url}"

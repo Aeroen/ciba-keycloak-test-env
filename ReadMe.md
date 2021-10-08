@@ -33,7 +33,7 @@ Using a JDK whose version is greater than 8 should be fine more often than not, 
   
 deploy.sh is the main script, which works as follow:  
 - Clone Keycloak from its main repository (keycloak/Keycloak)  
-- Clone the authentication server (tnorimat/ciba-authn-entity)  
+- Clone the authentication server (Aeroen/ciba-authn-entity)  
 - Build both of these  
 - Do some configuration in order to enable CIBA  
 - Launch Keycloak in order to do some more configuration  
